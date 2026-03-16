@@ -1,0 +1,33 @@
+services:
+  # Votre base de données existante
+  db:
+    image: mariadb:10.11
+    environment:
+      - MYSQL_ROOT_PASSWORD=secret_pass
+    volumes:
+      - db_data:/var/lib/mysql
+
+  # Votre application
+  bookstack:
+    image: lscr.io/linuxserver/bookstack
+    volumes:
+      - bookstack_files:/config/www
+
+  # L'AGENT DE SAUVEGARDE (La Partie 2)
+  backup_agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.backup
+    environment:
+      - MYSQL_ROOT_PASSWORD=secret_pass
+      - RESTIC_REPOSITORY=/backup_repo
+      - RESTIC_PASSWORD_FILE=/run/secrets/restic_pw
+    volumes:
+      # Accès aux données à sauvegarder (Lecture seule)
+      - bookstack_files:/data/bookstack:ro
+      # Simulation du "disque séparé" (Point de montage local ou loop device)
+      - ./my_restic_repo:/backup_repo
+      # Sécurisation du mot de passe
+      - ./restic_password.txt:/run/secrets/restic_pw:ro
+    depends_on:
+      - db
