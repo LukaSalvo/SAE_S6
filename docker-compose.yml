@@ -1,33 +1,102 @@
 services:
-  # Votre base de données existante
+
+  # ──────────────────────────────────────────────────────────────
+  # Base de données MariaDB (mysqldump)
+  # ──────────────────────────────────────────────────────────────
   db:
     image: mariadb:10.11
+    container_name: mariadb
+    restart: unless-stopped
     environment:
-      - MYSQL_ROOT_PASSWORD=secret_pass
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-secret_pass}
+      MYSQL_DATABASE: bookstack
     volumes:
       - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-secret_pass}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # Votre application
+  # ──────────────────────────────────────────────────────────────
+  # Base de données PostgreSQL (pg_dump)
+  # ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pguser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pgpass}
+      POSTGRES_DB: ${POSTGRES_DB:-pgdb}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pguser}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ──────────────────────────────────────────────────────────────
+  # Application Bookstack
+  # ──────────────────────────────────────────────────────────────
   bookstack:
     image: lscr.io/linuxserver/bookstack
+    container_name: bookstack
+    restart: unless-stopped
+    environment:
+      DB_HOST: db
+      DB_USER: root
+      DB_PASS: ${MYSQL_ROOT_PASSWORD:-secret_pass}
+      DB_DATABASE: bookstack
     volumes:
-      - bookstack_files:/config/www
+      - bookstack_files:/config
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "6875:80"
 
-  # L'AGENT DE SAUVEGARDE (La Partie 2)
+  # ──────────────────────────────────────────────────────────────
+  # Agent de sauvegarde Restic
+  # ──────────────────────────────────────────────────────────────
   backup_agent:
     build:
       context: .
       dockerfile: Dockerfile.backup
+    container_name: backup_agent
     environment:
-      - MYSQL_ROOT_PASSWORD=secret_pass
-      - RESTIC_REPOSITORY=/backup_repo
-      - RESTIC_PASSWORD_FILE=/run/secrets/restic_pw
+      # Restic — dépôt et mot de passe via fichier sécurisé
+      RESTIC_REPOSITORY: /backup_repo
+      RESTIC_PASSWORD_FILE: /run/secrets/restic_pw
+
+      # MariaDB
+      MYSQL_HOST: db
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-secret_pass}
+
+      # PostgreSQL
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-pguser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pgpass}
+      POSTGRES_DB: ${POSTGRES_DB:-pgdb}
     volumes:
-      # Accès aux données à sauvegarder (Lecture seule)
+      # Volumes Docker à sauvegarder (lecture seule)
       - bookstack_files:/data/bookstack:ro
-      # Simulation du "disque séparé" (Point de montage local ou loop device)
+      - db_data:/data/db_data:ro
+      - postgres_data:/data/postgres_data:ro
+
+      # Dépôt Restic — simule un disque séparé (loop device)
       - ./my_restic_repo:/backup_repo
-      # Sécurisation du mot de passe
+
+      # Fichier de mot de passe sécurisé (lecture seule)
       - ./restic_password.txt:/run/secrets/restic_pw:ro
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+volumes:
+  db_data:
+  postgres_data:
+  bookstack_files:

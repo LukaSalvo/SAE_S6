@@ -1,2 +1,9 @@
 *.img
 my_restic_repo/
+
+# Sécurité — ne jamais committer le mot de passe Restic
+restic_password.txt
+
+# Image disque (loop device)
+*.img
+/var/backup_disk.img
