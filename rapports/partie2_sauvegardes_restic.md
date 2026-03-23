@@ -18,7 +18,7 @@ La solution repose sur un **Agent de Sauvegarde** (conteneur Docker `backup_agen
 
 ### A. Installation (`Dockerfile.backup`)
 L'agent est basé sur une image **Alpine Linux** légère contenant les clients MariaDB/PostgreSQL et le binaire Restic.
-- [Dockerfile.backup](file:///Users/lukasalvo/Documents/BUT/3_Annee/SAE/SAE_S6/Dockerfile.backup)
+- Voir [`Dockerfile.backup`](../docker/Dockerfile.backup)
 
 ### B. Script de Sauvegarde (`backup_script.sh`)
 Le script automatise le flux complet :
@@ -30,7 +30,7 @@ Le script automatise le flux complet :
    - 4 sauvegardes hebdomadaires.
    - 12 sauvegardes mensuelles.
 5. **Intégrité** : Lance une vérification (`restic check`) pour garantir l'absence de corruption.
-- [backup_script.sh](file:///Users/lukasalvo/Documents/BUT/3_Annee/SAE/SAE_S6/backup_script.sh)
+- Voir [`backup_script.sh`](../scripts/backup_script.sh)
 
 ### C. Sécurité
 Le mot de passe du dépôt est stocké dans un fichier protégé (`restic_password.txt`) monté en lecture seule. La variable `RESTIC_PASSWORD_FILE` permet à Restic d'y accéder sans jamais exposer le mot de passe en clair dans les processus ou les logs.

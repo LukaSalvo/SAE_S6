@@ -1,9 +1,21 @@
-*.img
+# Restic
 my_restic_repo/
-
-# Sécurité — ne jamais committer le mot de passe Restic
 restic_password.txt
 
-# Image disque (loop device)
+# Loop device
 *.img
-/var/backup_disk.img
+
+# Dumps SQL temporaires
+*.sql
+
+# Environnement
+.env
+*.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

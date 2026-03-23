@@ -16,7 +16,7 @@ RUN mkdir -p /data/bookstack /data/db_data /data/postgres_data /backup_repo /scr
 WORKDIR /scripts
 
 # Copie du script de sauvegarde
-COPY backup_script.sh .
+COPY scripts/backup_script.sh .
 RUN chmod +x backup_script.sh
 
 ENTRYPOINT ["/bin/bash", "./backup_script.sh"]

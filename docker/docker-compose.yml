@@ -62,8 +62,8 @@ services:
   # ──────────────────────────────────────────────────────────────
   backup_agent:
     build:
-      context: .
-      dockerfile: Dockerfile.backup
+      context: ..
+      dockerfile: docker/Dockerfile.backup
     container_name: backup_agent
     environment:
       # Restic — dépôt et mot de passe via fichier sécurisé
@@ -91,10 +91,10 @@ services:
       - postgres_data:/data/postgres_data:ro
 
       # Dépôt Restic — simule un disque séparé (loop device)
-      - ./my_restic_repo:/backup_repo
+      - ../my_restic_repo:/backup_repo
 
       # Fichier de mot de passe sécurisé (lecture seule)
-      - ./restic_password.txt:/run/secrets/restic_pw:ro
+      - ../restic_password.txt:/run/secrets/restic_pw:ro
     depends_on:
       db:
         condition: service_healthy
