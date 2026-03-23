@@ -46,7 +46,7 @@ services:
     restart: unless-stopped
     environment:
       APP_URL: "http://localhost:6875"
-      APP_KEY: "base64:9qyI66P+nTyufj9wBrAggq4hVIejJfhWQ+bBxLKhmwI="
+      APP_KEY: ${APP_KEY}
       DB_HOST: db
       DB_PORT: 3306
       DB_USERNAME: root

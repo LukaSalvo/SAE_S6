@@ -19,3 +19,5 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+/docker/.env
+/restic_password.txt
