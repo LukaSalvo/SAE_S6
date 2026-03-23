@@ -75,11 +75,22 @@ echo "[3/5] 💾 Sauvegardes Restic en cours..."
 
 # — SAUVEGARDE LOCALE —
 echo "      → Sauvegarde vers le dépôt LOCAL..."
+
+BACKUP_PATHS=(
+    "${DUMP_DIR}"
+    /data/bookstack
+    /data/db_data
+    /data/postgres_data
+    /project/docker
+)
+
+# Sauvegarde facultative du .env s'il existe
+if [ -f /project/.env ]; then
+    BACKUP_PATHS+=( /project/.env )
+fi
+
 restic -r "${RESTIC_REPOSITORY}" backup \
-    "${DUMP_DIR}" \
-    /data/bookstack \
-    /data/db_data \
-    /data/postgres_data \
+    "${BACKUP_PATHS[@]}" \
     --tag "sae_local" \
     --tag "${TIMESTAMP}"
 

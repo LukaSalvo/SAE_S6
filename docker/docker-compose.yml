@@ -45,9 +45,12 @@ services:
     container_name: bookstack
     restart: unless-stopped
     environment:
+      APP_URL: "http://localhost:6875"
+      APP_KEY: "base64:9qyI66P+nTyufj9wBrAggq4hVIejJfhWQ+bBxLKhmwI="
       DB_HOST: db
-      DB_USER: root
-      DB_PASS: ${MYSQL_ROOT_PASSWORD:-secret_pass}
+      DB_PORT: 3306
+      DB_USERNAME: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-secret_pass}
       DB_DATABASE: bookstack
     volumes:
       - bookstack_files:/config
@@ -95,6 +98,9 @@ services:
 
       # Fichier de mot de passe sécurisé (lecture seule)
       - ../restic_password.txt:/run/secrets/restic_pw:ro
+
+      # Projet monté en lecture seule pour sauvegarder la config Docker
+      - ..:/project:ro
     depends_on:
       db:
         condition: service_healthy
