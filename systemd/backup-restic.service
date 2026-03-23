@@ -1,0 +1,15 @@
+[Unit]
+Description=Service de sauvegarde Restic avec rapports Monitoring
+After=network.target docker.service
+Wants=docker.service
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/Users/lukasalvo/Documents/BUT/3_Annee/SAE/SAE_S6
+ExecStart=/bin/bash /Users/lukasalvo/Documents/BUT/3_Annee/SAE/SAE_S6/scripts/backup_orchestrator.sh
+# Sécurité : Limiter les ressources si nécessaire
+# EnvironmentFile=-/etc/default/backup-restic
+
+[Install]
+WantedBy=multi-user.target

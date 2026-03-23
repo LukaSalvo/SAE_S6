@@ -1,0 +1,20 @@
+groups:
+  - name: backup_alerts
+    rules:
+      - alert: BackupGaps
+        expr: (time() - restic_last_backup_timestamp_seconds{status="success"}) > 90000
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Pas de sauvegarde réussie depuis plus de 25 heures"
+          description: "La dernière sauvegarde réussie remonte à plus de 25 heures."
+
+      - alert: IntegrityFailure
+        expr: restic_integrity_status != 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Échec de la vérification d'intégrité Restic"
+          description: "Le dernier check d'intégrité a retourné des erreurs."
