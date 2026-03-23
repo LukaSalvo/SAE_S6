@@ -79,6 +79,11 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-pguser}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pgpass}
       POSTGRES_DB: ${POSTGRES_DB:-pgdb}
+
+      # Restic — configuration S3 (MinIO)
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      RESTIC_REMOTE_REPOSITORY: s3:http://minio:9000/restic-bucket
     volumes:
       # Volumes Docker à sauvegarder (lecture seule)
       - bookstack_files:/data/bookstack:ro
@@ -95,8 +100,47 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+
+  # ──────────────────────────────────────────────────────────────
+  # Stockage Objet MinIO (Simulation Cloud S3)
+  # ──────────────────────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000" # API
+      - "9001:9001" # Console UI
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Initialisation du bucket MinIO
+  minio-init:
+    image: minio/mc:latest
+    container_name: minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin};
+      /usr/bin/mc mb myminio/restic-bucket || true;
+      exit 0;
+      "
 
 volumes:
   db_data:
   postgres_data:
   bookstack_files:
+  minio_data:

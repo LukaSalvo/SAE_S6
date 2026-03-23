@@ -16,17 +16,27 @@ echo " 🔑 Password file : ${RESTIC_PASSWORD_FILE}"
 echo "============================================================"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 1. Initialisation du dépôt Restic (si non existant)
+# 1. Initialisation des dépôts Restic (Local + Remote)
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
-echo "[1/5] 🛠️  Vérification / initialisation du dépôt Restic..."
+echo "[1/5] 🛠️  Vérification / initialisation des dépôts Restic..."
 
-if restic snapshots >/dev/null 2>&1; then
-    echo "      ✔ Dépôt déjà initialisé."
+# — Dépôt Local —
+if restic -r "${RESTIC_REPOSITORY}" snapshots >/dev/null 2>&1; then
+    echo "      ✔ Dépôt LOCAL déjà initialisé."
 else
-    echo "      ℹ  Dépôt absent — initialisation en cours dans ${RESTIC_REPOSITORY}..."
-    restic init
-    echo "      ✔ Dépôt initialisé avec succès."
+    echo "      ℹ  Dépôt LOCAL absent — initialisation..."
+    restic -r "${RESTIC_REPOSITORY}" init
+    echo "      ✔ Dépôt LOCAL initialisé."
+fi
+
+# — Dépôt Remote (S3) —
+if restic -r "${RESTIC_REMOTE_REPOSITORY}" snapshots >/dev/null 2>&1; then
+    echo "      ✔ Dépôt REMOTE (S3) déjà initialisé."
+else
+    echo "      ℹ  Dépôt REMOTE (S3) absent — initialisation..."
+    restic -r "${RESTIC_REMOTE_REPOSITORY}" init
+    echo "      ✔ Dépôt REMOTE (S3) initialisé."
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -58,50 +68,63 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 3. Sauvegarde Restic — dumps + volumes applicatifs
+# 3. Sauvegarde Restic — Double destination (L/R)
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
-echo "[3/5] 💾 Sauvegarde Restic en cours..."
+echo "[3/5] 💾 Sauvegardes Restic en cours..."
 
-# On sauvegarde les dumps ainsi que les dossiers montés depuis les volumes Docker
-restic backup \
+# — SAUVEGARDE LOCALE —
+echo "      → Sauvegarde vers le dépôt LOCAL..."
+restic -r "${RESTIC_REPOSITORY}" backup \
     "${DUMP_DIR}" \
     /data/bookstack \
     /data/db_data \
     /data/postgres_data \
-    --tag "sae_backup" \
+    --tag "sae_local" \
     --tag "${TIMESTAMP}"
 
-echo "      ✔ Sauvegarde Restic terminée."
+# — RÉPLICATION DISTANTE (S3) —
+# Note: On utilise 'copy' pour répliquer les snapshots du dépôt local vers le remote
+echo "      → Réplication vers le dépôt REMOTE (S3)..."
+restic -r "${RESTIC_REMOTE_REPOSITORY}" copy \
+    --from-repo "${RESTIC_REPOSITORY}" \
+    --from-password-file "${RESTIC_PASSWORD_FILE}" \
+    --tag "sae_local"
 
-# Nettoyage des dumps temporaires pour libérer de l'espace
+echo "      ✔ Sauvegardes terminées."
+
+# Nettoyage des dumps temporaires
 rm -f "${DUMP_DIR}"/*.sql
-echo "      ✔ Nettoyage des fichiers temporaires terminé."
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 4. Politique de rétention (Règle de prune)
+# 4. Politique de rétention sur les deux dépôts
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 echo "[4/5] 🧹 Application de la politique de rétention..."
-echo "      Conservation : 7 jours, 4 semaines, 12 mois."
 
-restic forget \
-    --keep-daily 7 \
-    --keep-weekly 4 \
-    --keep-monthly 12 \
-    --prune
+for repo in "${RESTIC_REPOSITORY}" "${RESTIC_REMOTE_REPOSITORY}"; do
+    echo "      → Pruning sur ${repo}..."
+    restic -r "${repo}" forget \
+        --keep-daily 7 \
+        --keep-weekly 4 \
+        --keep-monthly 12 \
+        --prune >/dev/null
+done
 
-echo "      ✔ Nettoyage des anciens snapshots terminé."
+echo "      ✔ Nettoyage terminé."
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 5. Vérification d'intégrité
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
-echo "[5/5] 🔍 Vérification d'intégrité du dépôt..."
+echo "[5/5] 🔍 Vérification d'intégrité des dépôts..."
 
-restic check
+for repo in "${RESTIC_REPOSITORY}" "${RESTIC_REMOTE_REPOSITORY}"; do
+    echo "      → Check sur ${repo}..."
+    restic -r "${repo}" check
+done
 
 echo ""
 echo "============================================================"
-echo " ✅ Sauvegarde terminée avec succès — $(date)"
+echo " ✅ Sauvegarde et Réplication terminées avec succès — $(date)"
 echo "============================================================"
