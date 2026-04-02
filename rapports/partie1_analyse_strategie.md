@@ -1,7 +1,6 @@
 # Rapport d'Analyse et Stratégie de Sauvegarde (Étape 1)
 
 **Projet :** Conception d'un Plan de Reprise d'Activité (PRA) pour infrastructure conteneurisée  
-**Équipe :** Groupe de 3 étudiants  
 **Contexte :** SAÉ S6.B.01 - Reprise rapide d'activité et externalisation cloud
 
 ---

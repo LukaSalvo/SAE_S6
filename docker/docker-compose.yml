@@ -197,6 +197,46 @@ services:
     depends_on:
       - prometheus
 
+  # ──────────────────────────────────────────────────────────────
+  # Injection de metriques de demonstration
+  # ──────────────────────────────────────────────────────────────
+  seed_metrics:
+    image: curlimages/curl:latest
+    container_name: seed_metrics
+    restart: unless-stopped
+    depends_on:
+      - pushgateway
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        echo "Attente du Pushgateway..."
+        until curl -sf http://pushgateway:9091/-/healthy > /dev/null 2>&1; do sleep 2; done
+        echo "Pushgateway disponible, injection des metriques..."
+        CYCLE=0
+        while true; do
+          NOW=$$(date +%s)
+          DURATION=$$(( 35 + CYCLE % 20 ))
+          SIZE=$$(( 52428800 + CYCLE * 102400 ))
+          cat <<METRICS | curl --silent --data-binary @- http://pushgateway:9091/metrics/job/restic_backup
+        # HELP restic_last_backup_timestamp_seconds Horodatage de la derniere sauvegarde reussie.
+        # TYPE restic_last_backup_timestamp_seconds gauge
+        restic_last_backup_timestamp_seconds{status="success"} $${NOW}
+        # HELP restic_backup_duration_seconds Duree totale de la sauvegarde en secondes.
+        # TYPE restic_backup_duration_seconds gauge
+        restic_backup_duration_seconds $${DURATION}
+        # HELP restic_backup_size_bytes Taille totale du depot Restic.
+        # TYPE restic_backup_size_bytes gauge
+        restic_backup_size_bytes $${SIZE}
+        # HELP restic_integrity_status Statut du dernier check d'integrite (0=OK, 1=Erreur).
+        # TYPE restic_integrity_status gauge
+        restic_integrity_status 0
+        METRICS
+          echo "[cycle $${CYCLE}] Metriques poussees (duree=$${DURATION}s, taille=$$(( SIZE / 1048576 ))Mo)"
+          CYCLE=$$(( CYCLE + 1 ))
+          sleep 60
+        done
+
 volumes:
   db_data:
   postgres_data:

@@ -37,7 +37,7 @@ echo "[5/5] Ajout dans /etc/fstab pour la persistance au redémarrage..."
 echo "${LOOP_FILE}  ${LOOP_MOUNT}  ext4  loop,defaults  0 0" >> /etc/fstab
 
 echo ""
-echo "✔ Loop device prêt : ${LOOP_DEV} monté sur ${LOOP_MOUNT}"
+echo "[OK] Loop device pret : ${LOOP_DEV} monte sur ${LOOP_MOUNT}"
 echo "  Ce dossier peut maintenant être utilisé comme RESTIC_REPOSITORY."
 echo ""
 echo "  Exemple :"

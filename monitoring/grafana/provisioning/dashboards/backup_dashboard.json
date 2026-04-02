@@ -26,7 +26,9 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            { "options": { "0": { "color": "green", "text": "OK" } , "1": { "color": "red", "text": "ERREUR" } }, "type": "value" }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -41,16 +43,49 @@
       "gridPos": { "h": 8, "w": 6, "x": 0, "y": 0 },
       "id": 1,
       "options": {
-        "colorMode": "value",
-        "graphMode": "area",
+        "colorMode": "background",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
         "textMode": "auto"
       },
       "pluginId": "stat",
-      "targets": [{ "expr": "restic_integrity_status", "refId": "A" }],
-      "title": "État d'intégrité (0=OK)",
+      "targets": [{ "expr": "restic_integrity_status", "legendFormat": "Integrite", "refId": "A" }],
+      "title": "Statut d'integrite",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          },
+          "unit": "dateTimeFromNow"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 6, "x": 6, "y": 0 },
+      "id": 4,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "pluginId": "stat",
+      "targets": [{ "expr": "restic_last_backup_timestamp_seconds{status=\"success\"} * 1000", "legendFormat": "Derniere sauvegarde", "refId": "A" }],
+      "title": "Derniere sauvegarde",
       "type": "stat"
     },
     {
@@ -58,20 +93,20 @@
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
-          "custom": { "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 10, "pointSize": 5, "showPoints": "auto" },
+          "custom": { "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 20, "gradientMode": "scheme", "lineWidth": 2, "pointSize": 5, "showPoints": "auto", "spanNulls": true },
           "unit": "s"
         },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 18, "x": 6, "y": 0 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
       "id": 2,
       "options": {
-        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom" },
+        "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" },
         "tooltip": { "mode": "single", "sort": "none" }
       },
       "pluginId": "timeseries",
-      "targets": [{ "expr": "restic_backup_duration_seconds", "refId": "A" }],
-      "title": "Durée de la sauvegarde",
+      "targets": [{ "expr": "restic_backup_duration_seconds", "legendFormat": "Duree", "refId": "A" }],
+      "title": "Duree de la sauvegarde",
       "type": "timeseries"
     },
     {
@@ -79,6 +114,7 @@
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
+          "custom": { "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "drawStyle": "line", "fillOpacity": 20, "gradientMode": "scheme", "lineWidth": 2, "pointSize": 5, "showPoints": "auto", "spanNulls": true },
           "unit": "decbytes"
         },
         "overrides": []
@@ -86,23 +122,24 @@
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
       "id": 3,
       "options": {
-        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom" },
+        "legend": { "calcs": ["mean", "lastNotNull"], "displayMode": "table", "placement": "bottom" },
         "tooltip": { "mode": "single", "sort": "none" }
       },
       "pluginId": "timeseries",
-      "targets": [{ "expr": "restic_backup_size_bytes", "refId": "A" }],
-      "title": "Taille du dépôt Restic",
+      "targets": [{ "expr": "restic_backup_size_bytes", "legendFormat": "Taille du depot", "refId": "A" }],
+      "title": "Taille du depot Restic",
       "type": "timeseries"
     }
   ],
+  "refresh": "30s",
   "schemaVersion": 36,
   "style": "dark",
   "tags": ["backup", "restic"],
   "templating": { "list": [] },
-  "time": { "from": "now-6h", "to": "now" },
+  "time": { "from": "now-1h", "to": "now" },
   "timepicker": {},
   "timezone": "",
   "title": "Sauvegardes Restic",
   "uid": "restic_backups",
-  "version": 1
+  "version": 2
 }

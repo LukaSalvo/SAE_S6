@@ -10,60 +10,60 @@ DUMP_DIR="/tmp/dumps"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
 echo "============================================================"
-echo " 🚀 Démarrage de la sauvegarde — $(date)"
-echo " 📂 Dépôt Restic : ${RESTIC_REPOSITORY}"
-echo " 🔑 Password file : ${RESTIC_PASSWORD_FILE}"
+echo " Demarrage de la sauvegarde -- $(date)"
+echo " Depot Restic : ${RESTIC_REPOSITORY}"
+echo " Password file : ${RESTIC_PASSWORD_FILE}"
 echo "============================================================"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Initialisation des dépôts Restic (Local + Remote)
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
-echo "[1/5] 🛠️  Vérification / initialisation des dépôts Restic..."
+echo "[1/5] Verification / initialisation des depots Restic..."
 
 # — Dépôt Local —
 if restic -r "${RESTIC_REPOSITORY}" snapshots >/dev/null 2>&1; then
-    echo "      ✔ Dépôt LOCAL déjà initialisé."
+    echo "      [OK] Depot LOCAL deja initialise."
 else
-    echo "      ℹ  Dépôt LOCAL absent — initialisation..."
+    echo "      [INFO] Depot LOCAL absent -- initialisation..."
     restic -r "${RESTIC_REPOSITORY}" init
-    echo "      ✔ Dépôt LOCAL initialisé."
+    echo "      [OK] Depot LOCAL initialise."
 fi
 
 # — Dépôt Remote (S3) —
 if restic -r "${RESTIC_REMOTE_REPOSITORY}" snapshots >/dev/null 2>&1; then
-    echo "      ✔ Dépôt REMOTE (S3) déjà initialisé."
+    echo "      [OK] Depot REMOTE (S3) deja initialise."
 else
-    echo "      ℹ  Dépôt REMOTE (S3) absent — initialisation..."
+    echo "      [INFO] Depot REMOTE (S3) absent -- initialisation..."
     restic -r "${RESTIC_REMOTE_REPOSITORY}" init
-    echo "      ✔ Dépôt REMOTE (S3) initialisé."
+    echo "      [OK] Depot REMOTE (S3) initialise."
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 2. Dumps des bases de données
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
-echo "[2/5] 🗄️  Extraction des bases de données..."
+echo "[2/5] Extraction des bases de donnees..."
 
 mkdir -p "${DUMP_DIR}"
 
 # --- MariaDB (mysqldump) ---
 MYSQL_DUMP="${DUMP_DIR}/mariadb_${TIMESTAMP}.sql"
-echo "      → mysqldump (MariaDB) vers ${MYSQL_DUMP}"
+echo "      > mysqldump (MariaDB) vers ${MYSQL_DUMP}"
 if mysqldump --host="${MYSQL_HOST}" --user=root --password="${MYSQL_ROOT_PASSWORD}" --all-databases --single-transaction --quick > "${MYSQL_DUMP}"; then
-    echo "      ✔ Dump MariaDB terminé ($(du -sh "${MYSQL_DUMP}" | cut -f1))."
+    echo "      [OK] Dump MariaDB termine ($(du -sh "${MYSQL_DUMP}" | cut -f1))."
 else
-    echo "      ❌ Erreur lors du dump MariaDB."
+    echo "      [ERREUR] Erreur lors du dump MariaDB."
     exit 1
 fi
 
 # --- PostgreSQL (pg_dump) ---
 PG_DUMP="${DUMP_DIR}/postgres_${TIMESTAMP}.sql"
-echo "      → pg_dump (PostgreSQL) vers ${PG_DUMP}"
+echo "      > pg_dump (PostgreSQL) vers ${PG_DUMP}"
 if PGPASSWORD="${POSTGRES_PASSWORD}" pg_dump --host="${POSTGRES_HOST}" --username="${POSTGRES_USER}" --dbname="${POSTGRES_DB}" --format=plain --no-password > "${PG_DUMP}"; then
-    echo "      ✔ Dump PostgreSQL terminé ($(du -sh "${PG_DUMP}" | cut -f1))."
+    echo "      [OK] Dump PostgreSQL termine ($(du -sh "${PG_DUMP}" | cut -f1))."
 else
-    echo "      ❌ Erreur lors du dump PostgreSQL."
+    echo "      [ERREUR] Erreur lors du dump PostgreSQL."
     exit 1
 fi
 
@@ -71,10 +71,10 @@ fi
 # 3. Sauvegarde Restic — Double destination (L/R)
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
-echo "[3/5] 💾 Sauvegardes Restic en cours..."
+echo "[3/5] Sauvegardes Restic en cours..."
 
 # — SAUVEGARDE LOCALE —
-echo "      → Sauvegarde vers le dépôt LOCAL..."
+echo "      > Sauvegarde vers le depot LOCAL..."
 
 BACKUP_PATHS=(
     "${DUMP_DIR}"
@@ -96,13 +96,13 @@ restic -r "${RESTIC_REPOSITORY}" backup \
 
 # — RÉPLICATION DISTANTE (S3) —
 # Note: On utilise 'copy' pour répliquer les snapshots du dépôt local vers le remote
-echo "      → Réplication vers le dépôt REMOTE (S3)..."
+echo "      > Replication vers le depot REMOTE (S3)..."
 restic -r "${RESTIC_REMOTE_REPOSITORY}" copy \
     --from-repo "${RESTIC_REPOSITORY}" \
     --from-password-file "${RESTIC_PASSWORD_FILE}" \
     --tag "sae_local"
 
-echo "      ✔ Sauvegardes terminées."
+echo "      [OK] Sauvegardes terminees."
 
 # Nettoyage des dumps temporaires
 rm -f "${DUMP_DIR}"/*.sql
@@ -111,10 +111,10 @@ rm -f "${DUMP_DIR}"/*.sql
 # 4. Politique de rétention sur les deux dépôts
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
-echo "[4/5] 🧹 Application de la politique de rétention..."
+echo "[4/5] Application de la politique de retention..."
 
 for repo in "${RESTIC_REPOSITORY}" "${RESTIC_REMOTE_REPOSITORY}"; do
-    echo "      → Pruning sur ${repo}..."
+    echo "      > Pruning sur ${repo}..."
     restic -r "${repo}" forget \
         --keep-daily 7 \
         --keep-weekly 4 \
@@ -122,20 +122,20 @@ for repo in "${RESTIC_REPOSITORY}" "${RESTIC_REMOTE_REPOSITORY}"; do
         --prune >/dev/null
 done
 
-echo "      ✔ Nettoyage terminé."
+echo "      [OK] Nettoyage termine."
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 5. Vérification d'intégrité
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
-echo "[5/5] 🔍 Vérification d'intégrité des dépôts..."
+echo "[5/5] Verification d'integrite des depots..."
 
 for repo in "${RESTIC_REPOSITORY}" "${RESTIC_REMOTE_REPOSITORY}"; do
-    echo "      → Check sur ${repo}..."
+    echo "      > Check sur ${repo}..."
     restic -r "${repo}" check
 done
 
 echo ""
 echo "============================================================"
-echo " ✅ Sauvegarde et Réplication terminées avec succès — $(date)"
+echo " [OK] Sauvegarde et Replication terminees avec succes -- $(date)"
 echo "============================================================"
